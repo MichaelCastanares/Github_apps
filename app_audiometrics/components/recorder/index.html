@@ -1,0 +1,221 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2733; }
+  #root { padding: 4px 2px; }
+  .track { height: 6px; background: rgba(128,128,128,.25); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+  #progress { height: 100%; width: 0%; background: #4c78a8; transition: width .1s linear; }
+  #lines { display: flex; flex-direction: column; gap: 8px; }
+  .line { font-size: 1.35rem; line-height: 1.35; padding: 8px 14px; border-left: 4px solid transparent;
+          border-radius: 6px; transition: opacity .3s, background .3s, border-color .3s; }
+  .line.future  { opacity: .15; }
+  .line.past     { opacity: .45; }
+  .line.current  { opacity: 1; background: rgba(76,120,168,.14); border-left-color: #4c78a8; font-weight: 600; }
+  .controls { margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  button { font-size: .95rem; padding: 9px 18px; border-radius: 8px; border: 0; color: #fff; cursor: pointer; }
+  #rec  { background: #d6455d; }
+  #stop { background: transparent; color: #d6455d; border: 1px solid #d6455d; }
+  button:disabled { opacity: .4; cursor: default; }
+  #status { font-size: .9rem; opacity: .85; }
+  #playback { display: block; margin-top: 14px; width: 100%; }
+  @media (prefers-color-scheme: dark) { body { color: #e6e9ef; } }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="track"><div id="progress"></div></div>
+  <div id="lines"></div>
+  <div class="controls">
+    <button id="rec" type="button">● Start recording</button>
+    <button id="stop" type="button" disabled>■ Stop</button>
+    <span id="status">Press Start — recording and the reading guide begin together.</span>
+  </div>
+  <audio id="playback" controls style="display:none"></audio>
+</div>
+
+<script>
+// --- Streamlit component protocol (manual, no build step) ------------------ //
+function send(type, extra) {
+  window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, extra), "*");
+}
+function setHeight(h) { send("streamlit:setFrameHeight", { height: h }); }
+function returnValue(v) { send("streamlit:setComponentValue", { value: v, dataType: "json" }); }
+
+// --- Config (filled from Streamlit render args) ---------------------------- //
+var LINES = [], INTERVAL = 10000, MAX_MS = 60000, OUT_RATE = 16000;
+var built = false, lastArgsKey = "";
+
+// --- DOM ------------------------------------------------------------------- //
+var linesEl = document.getElementById("lines");
+var progressEl = document.getElementById("progress");
+var statusEl = document.getElementById("status");
+var recBtn = document.getElementById("rec");
+var stopBtn = document.getElementById("stop");
+var playbackEl = document.getElementById("playback");
+var els = [];
+
+function buildUI() {
+  linesEl.innerHTML = "";
+  els = LINES.map(function (text) {
+    var d = document.createElement("div");
+    d.className = "line future";
+    d.textContent = text;
+    linesEl.appendChild(d);
+    return d;
+  });
+  progressEl.style.width = "0%";
+  playbackEl.style.display = "none";
+  recBtn.disabled = false;
+  stopBtn.disabled = true;
+  statusEl.textContent = "Press Start — recording and the reading guide begin together.";
+  setHeight(210 + LINES.length * 56);
+  built = true;
+}
+
+// --- Paced guide ----------------------------------------------------------- //
+function paint(elapsed) {
+  var idx = Math.min(LINES.length - 1, Math.floor(elapsed / INTERVAL));
+  for (var i = 0; i < els.length; i++) {
+    els[i].className = "line " + (i < idx ? "past" : i === idx ? "current" : "future");
+  }
+  progressEl.style.width = Math.min(100, (elapsed / MAX_MS) * 100) + "%";
+  var totalLeft = Math.max(0, Math.ceil((MAX_MS - elapsed) / 1000));
+  var lineLeft = Math.ceil((INTERVAL - (elapsed % INTERVAL)) / 1000);
+  statusEl.textContent = "🔴 Recording · line " + (idx + 1) + " of " + LINES.length +
+    " · next in " + lineLeft + "s · " + totalLeft + "s left";
+}
+
+// --- Recording (WebAudio -> WAV) ------------------------------------------- //
+var recording = false, audioCtx = null, stream = null, processor = null;
+var chunks = [], inRate = 44100, timer = null, startTime = 0;
+
+async function start() {
+  if (recording) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+  } catch (e) {
+    statusEl.textContent = "⚠️ Microphone access denied: " + e.message;
+    return;
+  }
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  inRate = audioCtx.sampleRate;
+  var source = audioCtx.createMediaStreamSource(stream);
+  processor = audioCtx.createScriptProcessor(4096, 1, 1);
+  var silent = audioCtx.createGain(); silent.gain.value = 0;  // avoid speaker feedback
+  chunks = [];
+  processor.onaudioprocess = function (e) {
+    if (!recording) return;
+    chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  };
+  source.connect(processor); processor.connect(silent); silent.connect(audioCtx.destination);
+
+  recording = true;
+  recBtn.disabled = true;
+  stopBtn.disabled = false;
+  playbackEl.style.display = "none";
+  startTime = Date.now();
+  paint(0);
+  timer = setInterval(function () {
+    var elapsed = Date.now() - startTime;
+    paint(elapsed);
+    if (elapsed >= MAX_MS) stop();   // hard 60s cap
+  }, 100);
+}
+
+function stop() {
+  if (!recording) return;
+  recording = false;
+  clearInterval(timer); timer = null;
+  if (processor) processor.disconnect();
+  if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+
+  var merged = mergeChunks(chunks);
+  var down = downsample(merged, inRate, OUT_RATE);
+  var view = encodeWAV(down, OUT_RATE);
+  var bytes = new Uint8Array(view.buffer);
+
+  // playback
+  var blob = new Blob([view], { type: "audio/wav" });
+  playbackEl.src = URL.createObjectURL(blob);
+  playbackEl.style.display = "block";
+
+  // hand WAV back to Python (base64)
+  returnValue(bufToBase64(bytes));
+
+  var secs = (down.length / OUT_RATE).toFixed(1);
+  statusEl.textContent = "✅ Recorded " + secs + "s. Analyzing… (press Start to redo)";
+  recBtn.disabled = false;
+  stopBtn.disabled = true;
+  if (audioCtx) audioCtx.close();
+}
+
+recBtn.addEventListener("click", start);
+stopBtn.addEventListener("click", stop);
+
+// --- Audio helpers --------------------------------------------------------- //
+function mergeChunks(list) {
+  var len = 0, i;
+  for (i = 0; i < list.length; i++) len += list[i].length;
+  var out = new Float32Array(len), off = 0;
+  for (i = 0; i < list.length; i++) { out.set(list[i], off); off += list[i].length; }
+  return out;
+}
+function downsample(buf, from, to) {
+  if (to >= from) return buf;
+  var ratio = from / to, newLen = Math.round(buf.length / ratio);
+  var out = new Float32Array(newLen), pos = 0;
+  for (var i = 0; i < newLen; i++) {
+    var next = Math.round((i + 1) * ratio), sum = 0, count = 0;
+    for (var j = pos; j < next && j < buf.length; j++) { sum += buf[j]; count++; }
+    out[i] = count ? sum / count : 0;
+    pos = next;
+  }
+  return out;
+}
+function encodeWAV(samples, rate) {
+  var buffer = new ArrayBuffer(44 + samples.length * 2), view = new DataView(buffer);
+  function str(off, s) { for (var i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); }
+  str(0, "RIFF"); view.setUint32(4, 36 + samples.length * 2, true); str(8, "WAVE");
+  str(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true); str(36, "data"); view.setUint32(40, samples.length * 2, true);
+  var off = 44;
+  for (var i = 0; i < samples.length; i++) {
+    var s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true); off += 2;
+  }
+  return view;
+}
+function bufToBase64(bytes) {
+  var bin = "", chunk = 0x8000;
+  for (var i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+// --- Receive args from Streamlit ------------------------------------------- //
+window.addEventListener("message", function (event) {
+  if (!event.data || event.data.type !== "streamlit:render") return;
+  var args = event.data.args || {};
+  LINES = args.lines || [];
+  INTERVAL = (args.interval_s || 10) * 1000;
+  MAX_MS = (args.max_s || 60) * 1000;
+  var key = JSON.stringify([LINES, INTERVAL, MAX_MS]);
+  if (recording) return;                 // never rebuild mid-recording
+  if (!built || key !== lastArgsKey) {   // (re)build on first render or when the passage changes
+    lastArgsKey = key;
+    buildUI();
+  } else {
+    setHeight(210 + LINES.length * 56);
+  }
+});
+
+send("streamlit:componentReady", { apiVersion: 1 });
+</script>
+</body>
+</html>
