@@ -19,7 +19,8 @@
       "We have often urged him to walk more and smoke less, but he always answers, 'Banana oil!'",
       "[pause]",
       "Grandfather likes to be modern in his language."
-    ],
+    ]
+  },
   "Fox": {
     "title": "Fox",
     "lines": [
@@ -29,7 +30,8 @@
       "What does the fox say?",
       "[pause]",
       "Will always be a mystery"
-    ],
+    ]
+  },
   "Maya": {
     "title": "Maya",
     "lines": [
@@ -39,6 +41,6 @@
       "Isang araw nakalabas sa hawla si Mia",
       "[pause]",
       "Ito ay malaya na"
-    ],
-  }
+    ]
+  },
 }
