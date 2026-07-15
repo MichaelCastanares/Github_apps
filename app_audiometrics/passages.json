@@ -24,23 +24,12 @@
   "Fox": {
     "title": "Fox",
     "lines": [
-      "Somewhere deep in the woods",
-      "I know you're hiding",
+      "The secret of the fox, ancient mystery.",
+      "Somewhere deep in the woods, I know you're hiding",
       "[pause]",
-      "What does the fox say?",
+      "What is your sound? Will we ever know?"
       "[pause]",
-      "Will always be a mystery"
-    ]
-  },
-  "Maya": {
-    "title": "Maya",
-    "lines": [
-      "Si aya ay may alagang maya",
-      "[pause]",
-      "Tinatawag niya itong Mia",
-      "Isang araw nakalabas sa hawla si Mia",
-      "[pause]",
-      "Ito ay malaya na"
+      "What does the fox say? It will always be a mystery"
     ]
   }
 }
