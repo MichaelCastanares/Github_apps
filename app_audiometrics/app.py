@@ -49,7 +49,7 @@ def get_setting(key, default=None):
 # base/small run ~real-time on CPU; medium/large want a GPU.
 # Overridable on Streamlit Cloud via a secret (drop to "base" if RAM is tight).
 WHISPER_MODEL_SIZE = get_setting("WHISPER_MODEL_SIZE", "small")
-ENV_CHOICES = ["Quiet room", "Office", "Outdoors", "Vehicle", "Other"]
+ENV_CHOICES = ["Quiet room", "Home", "Office", "Outdoors", "Vehicle", "Cafe", "School", "Mall"]
 LINE_INTERVAL_S = 10  # default seconds each passage line stays before the next reveals
 MAX_RECORD_S = 60     # hard cap: recording and the reading guide both stop at this
 # WER at/above this (3%) flags the user to redo the reading
