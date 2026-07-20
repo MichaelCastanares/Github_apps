@@ -10,6 +10,7 @@ import io
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import csv
+import hmac
 import json
 import re
 import base64
@@ -480,7 +481,10 @@ def check_password():
         if hmac.compare_digest(str(entered), str(password)):
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # don't keep the raw password around
-            start_session()  # the login *is* the session — begin with an empty store
+            # The login *is* the session — begin with an empty store.
+            st.session_state[ROWS_KEY] = []
+            st.session_state[WAVS_KEY] = {}
+            st.session_state.pop("export_cache", None)
         else:
             st.session_state["password_correct"] = False
 
