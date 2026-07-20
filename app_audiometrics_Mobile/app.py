@@ -508,7 +508,10 @@ def process_recording(wav_bytes, reference_text, lines=None, interval_s=None):
 # --------------------------------------------------------------------------- #
 def main():
     st.set_page_config(page_title="Audio Metrics Mobile Versio — SNR & WER", page_icon="🎙️")
-
+  
+    if not check_password():
+        st.stop()
+    
     render_sidebar()
     passages = load_passages()
 
