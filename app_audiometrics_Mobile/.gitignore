@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets — never commit
+.streamlit/secrets.toml
+
+# App data (ephemeral / user-generated — do not commit)
+audio_metrics.db
+recordings/
+sessions.json
+
+# OS / editor
+.DS_Store
+
+# Local tooling
+.claude/
