@@ -470,12 +470,12 @@ def process_recording(wav_bytes, reference_text, lines=None, interval_s=None):
 # UI
 # --------------------------------------------------------------------------- #
 def main():
-    st.set_page_config(page_title="Audio Metrics Mobile Version — SNR & WER", page_icon="🎙️")
+    st.set_page_config(page_title="Audio Metrics Mobile Versio — SNR & WER", page_icon="🎙️")
 
     render_sidebar()
     passages = load_passages()
 
-    st.title("🎙️ Audio Metrics")
+    st.title("🎙️ Audio Metrics Mobile Version")
     st.caption(
         "Read the passage aloud in ~60 seconds. We measure SNR and Word Error Rate.")
 
