@@ -470,7 +470,7 @@ def process_recording(wav_bytes, reference_text, lines=None, interval_s=None):
 # UI
 # --------------------------------------------------------------------------- #
 def main():
-    st.set_page_config(page_title="Audio Metrics — SNR & WER", page_icon="🎙️")
+    st.set_page_config(page_title="Audio Metrics Mobile Version — SNR & WER", page_icon="🎙️")
 
     render_sidebar()
     passages = load_passages()
