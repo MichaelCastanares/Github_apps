@@ -484,7 +484,7 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
 
-    st.title("Audio Metrics")
+    st.title("Audio Metrics Mobile Version")
     st.caption("This app measures SNR and Word Error Rate from a read passage.")
     st.caption("Designed by M. Castanares")
     st.caption("Please enter the password to access the app.")
