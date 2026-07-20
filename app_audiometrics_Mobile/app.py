@@ -449,6 +449,43 @@ def recorder(lines, interval_s, max_s=MAX_RECORD_S, key="recorder"):
     return _recorder(lines=lines, interval_s=interval_s, max_s=max_s,
                      key=key, default=None)
 
+# --------------------------------------------------------------------------- #
+# Access control — password gate (Streamlit-native, backed by st.secrets)
+# --------------------------------------------------------------------------- #
+def check_password():
+    """Return True if the user is authorized.
+
+    The password is read from st.secrets["APP_PASSWORD"] (or the APP_PASSWORD
+    env var). If none is configured, the gate is open — so local dev works
+    without secrets while a deployed instance can require one.
+    """
+    password = get_setting("APP_PASSWORD")
+    if not password:
+        return True
+    if st.session_state.get("password_correct"):
+        return True
+
+    def _verify():
+        entered = st.session_state.get("password", "")
+        if hmac.compare_digest(str(entered), str(password)):
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # don't keep the raw password around
+            start_session()  # the login *is* the session — begin with an empty store
+        else:
+            st.session_state["password_correct"] = False
+
+    st.title("Audio Metrics")
+    st.caption("This app measures SNR and Word Error Rate from a read passage.")
+    st.caption("Designed by M. Castanares")
+    st.caption("Please enter the password to access the app.")
+    st.text_input("Password", type="password", on_change=_verify, key="password")
+    st.text("""By proceeding, you agree to the terms of use and privacy policy. The app temporarily captures the audio/microphone input for analysis purposes only. It does not store or share any personal data.""")
+    
+    if st.session_state.get("password_correct") is False:
+        st.error("😕 Incorrect password.")
+    
+    return False
+
 
 # --------------------------------------------------------------------------- #
 # Heavy compute, memoized per unique recording
