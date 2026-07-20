@@ -36,6 +36,16 @@ PASSAGES_FILE = APP_DIR / "passages.json"
 ROWS_KEY = "session_rows"     # list[dict] — one entry per saved reading
 WAVS_KEY = "session_wavs"     # dict[filename -> wav bytes]
 
+def get_setting(key, default=None):
+    """Read a config value from st.secrets (Streamlit Cloud) or the environment."""
+    try:
+        if key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    return os.environ.get(key, default)
+
+
 # base/small run ~real-time on CPU; medium/large want a GPU.
 # Overridable via the WHISPER_MODEL_SIZE env var (drop to "base" if RAM is tight).
 WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "small")
