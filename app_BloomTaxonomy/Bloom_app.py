@@ -32,7 +32,12 @@ from lime.lime_text import LimeTextExplainer
 from utils import clean_text, proc_TFIDF
 
 
-SLIM_MODEL_PATH = './XGBLau_slim.pkl'
+# Resolve data files against this file's directory, not the working directory.
+# Streamlit Community Cloud runs the app with cwd set to the REPO ROOT
+# (/mount/src/github_apps), so './XGBLau_slim.pkl' would look in the wrong
+# folder for an app that lives in a subdirectory.
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+SLIM_MODEL_PATH = os.path.join(APP_DIR, 'XGBLau_slim.pkl')
 CLASS_NAMES = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create']
 
 # NLTK corpora needed by utils.enhanced_preprocess (word_tokenize + pos_tag).
