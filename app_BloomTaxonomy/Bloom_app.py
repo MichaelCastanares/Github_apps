@@ -232,7 +232,7 @@ st.caption('**Instruction**. Enter a learning objective or question to get its B
            'A sample result is shown below. '
            'The model predicts that the statement is at "create" Bloom level (0.59 probability), '
            'attributed to the words "design", "optimized", and "establish".')
-st.image('./example.png')
+st.image('https://github.com/MichaelCastanares/Github_apps/blob/5daf6e53712b9b924ca54331b26795b802142b2f/app_BloomTaxonomy/example.png?raw=true', use_column_width=True)
 
 text = st.text_area('Text to classify', 
                     value='Participants will design an optimized project timeline using Gantt charts and establish key milestones for deliverables',
