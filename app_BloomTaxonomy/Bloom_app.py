@@ -21,6 +21,7 @@ Rebuild the slim artifact with:  python build_slim_model.py
 import os
 import pickle
 import threading
+import hmac
 
 import numpy as np
 import pandas as pd
@@ -171,7 +172,50 @@ def explain(text, predict_proba_fn, num_features, num_samples):
     return probs, pred_class_idx, exp
 
 
+
+def check_password():
+    """Return True if the user is authorized.
+
+    The password is read from st.secrets["APP_PASSWORD"] (or the APP_PASSWORD
+    env var). If none is configured, the gate is open — so local dev works
+    without secrets while a deployed instance can require one.
+    """
+    password = get_setting("APP_PASSWORD")
+    if not password:
+        return True
+    if st.session_state.get("password_correct"):
+        return True
+
+    def _verify():
+        entered = st.session_state.get("password", "")
+        if hmac.compare_digest(str(entered), str(password)):
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # don't keep the raw password around
+            # The login *is* the session — begin with an empty store.
+            st.session_state[ROWS_KEY] = []
+            st.session_state[WAVS_KEY] = {}
+            st.session_state.pop("export_cache", None)
+        else:
+            st.session_state["password_correct"] = False
+
+    st.title("Audio Metrics Mobile Version")
+    st.caption("This app measures SNR and Word Error Rate from a read passage.")
+    st.caption("Designed by M. Castanares")
+    st.caption("Please enter the password to access the app.")
+    st.text_input("Password", type="password", on_change=_verify, key="password")
+    st.text("""By proceeding, you agree to the terms of use and privacy policy. The app temporarily captures the audio/microphone input for analysis purposes only. It does not store or share any personal data.""")
+    
+    if st.session_state.get("password_correct") is False:
+        st.error("😕 Incorrect password.")
+    
+    return False
+
 # APP
+st.set_page_config(page_title="ML-based Bloom Taxonomy Classifier")
+
+if not check_password():
+    st.stop()
+
 num_features= 6
 num_samples= 100
 
