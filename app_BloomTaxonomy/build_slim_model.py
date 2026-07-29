@@ -33,7 +33,7 @@ from sklearn.preprocessing import StandardScaler
 from utils import enhanced_preprocess
 
 FULL_MODEL_PATH = './XGBLau_TFIDF.pkl'
-SLIM_MODEL_PATH = './model_slim.pkl'
+SLIM_MODEL_PATH = './XGBLau_slim.pkl'
 CLASS_NAMES = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create']
 FEAT = 'text'
 

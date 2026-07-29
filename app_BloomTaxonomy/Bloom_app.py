@@ -151,8 +151,8 @@ def load_predictor():
         predict_proba_fn = PredictProbaWrapperSlim(SLIM_MODEL_PATH)
     else:
         raise FileNotFoundError(
-            f'No model artifact found. Expected {SLIM_MODEL_PATH} '
-            f'(build it with: python build_slim_model.py) or {FULL_MODEL_PATH}.')
+            f'No model artifact found at {SLIM_MODEL_PATH}. '
+            f'Build it with: python build_slim_model.py')
 
     return ThreadSafePredictProbaWrapper(predict_proba_fn, threading.Lock())
 
