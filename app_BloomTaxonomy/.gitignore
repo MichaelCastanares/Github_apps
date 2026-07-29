@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Training artifact — 147MB, exceeds GitHub's 100MB file limit.
+# Deployment uses model_slim.pkl (built by build_slim_model.py) instead.
+XGBLau_TFIDF.pkl
+
+# Generated output (the app renders LIME inline; nothing is written to disk)
+LIME_tmp.html
+
+# Secrets — never commit
+.streamlit/secrets.toml
+
+# OS / editor
+.DS_Store
+
+# Local tooling
+.claude/
